@@ -1,33 +1,37 @@
-// 描述单个 GPU 的状态（比如 "free" 或者 "job_0"）
-export type GpuStatus = string
-
-// 描述单个物理节点（8张卡）
-export interface ClusterNode {
-  node_id: number
-  gpus: GpuStatus[]
+// 1. 全局静态元数据
+export interface ReplayMeta {
+  total_nodes: number
+  gpus_per_node: number
 }
 
-// 描述挂起/等待队列
+// 2. 任务静态详情 (字典：Job ID -> 详情)
+export interface JobInfo {
+  group: string
+  member_id: string
+  target_ratio: number
+}
+
+// 3. 动态挂起/排队队列
 export interface JobQueues {
   running: number[]
   pending: number[]
   sync_waiting: number[]
 }
 
-// 描述任务详细信息（供悬浮提示使用）
-export interface JobInfo {
-  mem_id: string
-  group: string
-  progress: number
-  target: number
-  status: string
-}
-
-// 描述时间轴上的一帧快照（也就是 replay.json 数组里的一个对象）
+// 4. 核心：单帧快照
 export interface ReplayFrame {
   timestamp: number
-  cluster_state: ClusterNode[]
+  events: string[]
+  // 稀疏字典：只记录有任务的 Node。Key 是 node_id 字符串，Value 是 8 个整数（Job ID）
+  // 按照你的设计，0 代表被占用，如果没有这个 Key，说明整个节点都是 Free 的。
+  cluster_state: Record<string, number[]>
   queues: JobQueues
-  jobs_info: Record<string, JobInfo>
   system_utility: number
+}
+
+// 5. 整个 replay.json 的根结构
+export interface ReplayRoot {
+  meta: ReplayMeta
+  job_info: Record<string, JobInfo>
+  frames: ReplayFrame[]
 }
